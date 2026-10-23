@@ -6,6 +6,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+
 jobs:
   test-with-db:
     runs-on: ubuntu-latest
@@ -23,7 +26,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15@sha256:baa22e6286bf832cb147b8bb5aa9d8bc999846d69c21d11bf63f58fbeed1fa48
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: sundai_test
@@ -37,12 +40,14 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Use Node.js 20.x
-      uses: actions/setup-node@v4
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       with:
-        node-version: '20.x'
+        persist-credentials: false
+
+    - name: Use Node.js 22.23.4
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      with:
+        node-version: '22.23.4'
         cache: 'npm'
 
     - name: Install dependencies
@@ -50,9 +55,10 @@ jobs:
 
     - name: Set up environment variables
       run: |
-        echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/sundai_test" >> .env.test
-        echo "NEXTAUTH_SECRET=test-secret" >> .env.test
-        echo "NEXTAUTH_URL=http://localhost:3000" >> .env.test
+        printf '%s\n' \
+          'DATABASE_URL=postgresql://postgres:postgres@localhost:5432/sundai_test' \
+          'NEXTAUTH_SECRET=test-secret' \
+          'NEXTAUTH_URL=http://localhost:3000' >> .env.test
 
     - name: Generate Prisma client
       run: npx prisma generate
@@ -77,7 +83,7 @@ jobs:
       run: npm run build
 
     - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@ab904c41d6ece82784817410c45d8b8c02684457
       with:
         file: ./coverage/lcov.info
         flags: unittests
