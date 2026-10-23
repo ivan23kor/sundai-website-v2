@@ -8,7 +8,7 @@ export async function POST(
 ) {
   try {
     // Get the current user's clerkId from auth
-    const { userId: clerkId } = auth();
+    const { userId: clerkId } = await auth();
     if (!clerkId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
@@ -57,7 +57,7 @@ export async function DELETE(
 ) {
   try {
     // Get the current user's clerkId from auth
-    const { userId: clerkId } = auth();
+    const { userId: clerkId } = await auth();
     if (!clerkId) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
