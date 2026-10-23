@@ -1,4 +1,4 @@
-import { authMiddleware } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 export async function afterAuthHandler(auth: any, req: any) {
@@ -58,11 +58,11 @@ export async function afterAuthHandler(auth: any, req: any) {
   }
 }
 
-export default authMiddleware({
-  publicRoutes: ["/", "/api/projects(.*)"], // Adjust public routes as needed
-  async afterAuth(auth, req) {
-    return afterAuthHandler(auth, req);
-  }
+const isPublicRoute = createRouteMatcher(["/", "/api/projects(.*)"]);
+
+export default clerkMiddleware(async (auth, req) => {
+  if (!isPublicRoute(req)) await auth.protect();
+  return afterAuthHandler(await auth(), req);
 });
 
 export const config = {
