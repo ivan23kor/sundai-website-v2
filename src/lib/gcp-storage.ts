@@ -1,22 +1,18 @@
 import { Storage } from "@google-cloud/storage";
 import { v4 as uuidv4 } from "uuid";
 
-// Validate environment variables
-if (!process.env.GOOGLE_PRIVATE_KEY)
-  throw new Error("Missing GOOGLE_PRIVATE_KEY");
-if (!process.env.GOOGLE_CLOUD_BUCKET)
-  throw new Error("Missing GOOGLE_CLOUD_BUCKET");
+let bucket: ReturnType<Storage["bucket"]> | undefined;
 
-// Decode and parse the base64-encoded credentials
-const credentials = JSON.parse(
-  Buffer.from(process.env.GOOGLE_PRIVATE_KEY, "base64").toString()
-);
-
-// Initialize storage with credentials from environment variables
-const storage = new Storage({
-  credentials,
-});
-const bucket = storage.bucket(process.env.GOOGLE_CLOUD_BUCKET);
+function getBucket() {
+  if (bucket) return bucket;
+  const encoded = process.env.GOOGLE_PRIVATE_KEY;
+  const name = process.env.GOOGLE_CLOUD_BUCKET;
+  if (!encoded) throw new Error("Missing GOOGLE_PRIVATE_KEY");
+  if (!name) throw new Error("Missing GOOGLE_CLOUD_BUCKET");
+  const credentials = JSON.parse(Buffer.from(encoded, "base64").toString());
+  bucket = new Storage({ credentials }).bucket(name);
+  return bucket;
+}
 
 export async function uploadToGCS(
   file: File,
@@ -32,6 +28,7 @@ export async function uploadToGCS(
       /[^a-zA-Z0-9.-]/g,
       "_"
     )}`;
+    const bucket = getBucket();
     const blob = bucket.file(filename);
 
     console.log("Saving file to GCS...");
@@ -52,7 +49,6 @@ export async function uploadToGCS(
     console.error("Detailed upload error:", {
       error,
       bucket: process.env.GOOGLE_CLOUD_BUCKET,
-      serviceAccount: credentials.client_email,
     });
     throw error;
   }
@@ -60,7 +56,7 @@ export async function uploadToGCS(
 
 export async function deleteFromGCS(filename: string): Promise<void> {
   try {
-    await bucket.file(filename).delete();
+    await getBucket().file(filename).delete();
   } catch (error) {
     console.error("Error deleting from GCS:", error);
     throw error;
